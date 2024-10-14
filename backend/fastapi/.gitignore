@@ -1,0 +1,19 @@
+# Python virtual environments
+venv/
+.env/
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+
+# Logs and coverage reports
+*.log
+coverage/
+
+# IDE and editor specific files
+.idea/
+.vscode/
+*.swp
+
+# OS generated files
+.DS_Store

@@ -1,0 +1,112 @@
+/* General Styles */
+body, html {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+    background: #f4f4f9;
+    color: #333;
+    height: 100%;
+    overflow-x: hidden;
+}
+
+header {
+    background: #025f99;
+    color: #fff;
+    padding: 10px 20px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo {
+    font-weight: bold;
+    font-size: 24px;
+}
+
+.nav-links {
+    list-style: none;
+    padding: 0;
+}
+
+.nav-links li {
+    display: inline;
+    margin-left: 20px;
+}
+
+.nav-links a {
+    text-decoration: none;
+    color: #fff;
+    font-size: 16px;
+    transition: color 0.3s ease-in-out;
+}
+
+.nav-links a:hover {
+    color: #aed6f1;
+}
+
+/* Main container styles */
+.container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    margin: 20px auto;
+    width: 95%;
+    max-width: 1200px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.10);
+}
+
+/* Data Block and Prediction Section Styling */
+.data-block {
+    background: #e9f5ff;
+    margin: 20px 0;
+    padding: 20px;
+    width: 100%;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+    text-align: center;
+}
+
+/* Prediction Results Styling */
+.predictions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.prediction-card {
+    background-color: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+    text-align: center;
+}
+
+.prediction-card:hover {
+    transform: scale(1.05);
+}
+
+.prediction-card h3 {
+    font-size: 20px;
+    color: #0275d8;
+}
+
+.prediction-card p {
+    font-size: 24px;
+    color: #333;
+}
+
+.prediction-card small {
+    display: block;
+    margin-top: 10px;
+    font-size: 14px;
+    color: #666;
+}

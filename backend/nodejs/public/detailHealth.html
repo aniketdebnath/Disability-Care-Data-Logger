@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Data Overview</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luxon@^3"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@^1"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/moment@2.29.1/moment.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="logo">Health Tracker</div>
+            <ul class="nav-links">
+                <li><a href="/">Health Dashboard</a></li>
+                <li><a href="/index.html">Health Overview</a></li>
+                <li><a href="/index.html#prediction-results">Anomaly Detection</a></li> <!-- New Tab -->
+            </ul>
+        </nav>
+    </header>
+    <main class="container">
+        <h1>Health Data Overview</h1>
+
+        <div class="daterange-container">
+            <label for="daterange">Select Date Range:</label>
+            <input type="text" id="daterange" name="daterange" />
+        </div>
+
+        <h2>Chart</h2>
+        <div class="chart-container">
+            <canvas id="healthChart"></canvas>
+        </div>
+
+        <h2>Table</h2>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Heart Rate (bpm)</th>
+                        <th>Oxygen Saturation (%)</th>
+                        <th>Accelerometer X</th>
+                        <th>Accelerometer Y</th>
+                        <th>Accelerometer Z</th>
+                    </tr>
+                </thead>
+                <tbody id="healthDataTableBody">
+                    <!-- Data will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+    <script src="detailHealth.js"></script>
+</body>
+</html>
