@@ -1,0 +1,33 @@
+version: "3.8"
+
+services:
+  fastapi-app:
+    build: ./backend/fastapi
+    container_name: fastapi-app
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/fastapi:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  nodejs-app:
+    build: ./backend/nodejs
+    container_name: nodejs-app
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend/nodejs:/app
+    environment:
+      - NODE_ENV=development
+
+  nginx:
+    image: nginx
+    container_name: nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./infrastructure/nginx/default:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - fastapi-app
+      - nodejs-app

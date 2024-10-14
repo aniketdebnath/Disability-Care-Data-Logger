@@ -16,10 +16,6 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
-# Docker
-docker-compose.yml
-Dockerfile
-
 # Python-specific files
 *.py[cod]
 *.pyo

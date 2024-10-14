@@ -6,3 +6,4 @@ pandas
 numpy
 heartpy
 scipy
+scikit-learn

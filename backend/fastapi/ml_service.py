@@ -3,14 +3,14 @@ import pandas as pd
 import numpy as np
 
 # Load the pre-trained models and their respective scalers
-svm_model = joblib.load('../ppg-signal-processing/models/svm_model_joblib.pkl')
-rf_model = joblib.load('../ppg-signal-processing/models/rf_model_joblib.pkl')
-knn_model = joblib.load('../ppg-signal-processing/models/knn_model_joblib.pkl')
+svm_model = joblib.load('models/svm_model_joblib.pkl')
+rf_model = joblib.load('models/rf_model_joblib.pkl')
+knn_model = joblib.load('models/knn_model_joblib.pkl')
 
 # Load the scalers
-svm_scaler = joblib.load('../ppg-signal-processing/models/svm_scaler.pkl')
-rf_scaler = joblib.load('../ppg-signal-processing/models/rf_scaler.pkl')
-knn_scaler = joblib.load('../ppg-signal-processing/models/knn_scaler.pkl')
+svm_scaler = joblib.load('models/svm_scaler.pkl')
+rf_scaler = joblib.load('models/rf_scaler.pkl')
+knn_scaler = joblib.load('models/knn_scaler.pkl')
 
 def process_signal(rr_interval, heart_rate):
     # Default values for missing features
