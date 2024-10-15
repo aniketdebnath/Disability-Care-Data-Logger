@@ -55,7 +55,7 @@ io.on("connection", async (socket) => {
       try {
         // Make a request to FastAPI to process the new PPG data
         const response = await axios.post(
-          "http://fastapi-app:8000/process_and_detect",
+          "http://fastapi-app:8000/api/process_and_detect",
           {
             GreenLED: ppgData,
           }

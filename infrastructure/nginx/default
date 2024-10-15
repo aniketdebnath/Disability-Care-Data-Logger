@@ -1,6 +1,6 @@
 server {
     listen 80;
-    server_name 3.27.219.6;  # Use localhost for local testing
+    server_name localhost;  # Use localhost for local testing
 
     # Proxy requests to the FastAPI app
     location /api {

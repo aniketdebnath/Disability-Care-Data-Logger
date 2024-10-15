@@ -34,7 +34,7 @@ class PredictionResponse(BaseModel):
     message: str
 
 # Automate Process and Prediction
-@app.post("/process_and_detect", response_model=PredictionResponse)
+@app.post("/api/process_and_detect", response_model=PredictionResponse)
 def process_and_detect(signal: PPGSignalInput):
     try:
         # Step 1: Process the PPG signal to extract RR Interval and Heart Rate
