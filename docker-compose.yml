@@ -10,6 +10,8 @@ services:
       - ./backend/fastapi:/app
     environment:
       - PYTHONUNBUFFERED=1
+    networks:
+      - app-network
 
   nodejs-app:
     build: ./backend/nodejs
@@ -21,6 +23,9 @@ services:
     environment:
       - NODE_ENV=development
       - MONGO_URI=mongodb+srv://FYPUSERS:k1iTgwyFFzGlAkeN@fyptestdb.d7zdlnq.mongodb.net/TestAniket # Add your MongoDB URI here
+    networks:
+      - app-network
+
   nginx:
     image: nginx
     container_name: nginx
@@ -31,3 +36,9 @@ services:
     depends_on:
       - fastapi-app
       - nodejs-app
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
