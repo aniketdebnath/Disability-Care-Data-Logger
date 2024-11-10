@@ -6,6 +6,7 @@ from tensorflow.keras.models import load_model
 import joblib
 from fastapi import FastAPI, HTTPException
 from sklearn.metrics import mean_squared_error
+import math
 
 app = FastAPI()
 
@@ -17,7 +18,7 @@ try:
 except Exception as e:
     print(f"Error connecting to MongoDB: {e}")
 
-# Bandpass filter for noise reduction
+# Step 1: Bandpass filter for noise reduction
 def bandpass_filter(data, lowcut, highcut, sample_rate, order=2):
     nyquist = 0.5 * sample_rate
     low = lowcut / nyquist
@@ -25,12 +26,12 @@ def bandpass_filter(data, lowcut, highcut, sample_rate, order=2):
     b, a = butter(order, [low, high], btype='band')
     return filtfilt(b, a, data)
 
-# Detect peaks in the filtered PPG signal
+# Step 2: Detect peaks in the filtered PPG signal
 def detect_peaks(ppg_data, sample_rate):
-    peaks, _ = find_peaks(ppg_data, distance=sample_rate * 0.5)
+    peaks, _ = find_peaks(ppg_data, distance=sample_rate * 0.5)  # Assuming min heart rate 30 bpm
     return peaks
 
-# Calculate IBI from detected peaks
+# Step 3: Calculate IBI from detected peaks
 def calculate_ibi_from_peaks(peaks, sample_rate):
     if len(peaks) > 1:
         ibi_intervals = np.diff(peaks) / sample_rate * 1000  # Convert to milliseconds
@@ -38,17 +39,24 @@ def calculate_ibi_from_peaks(peaks, sample_rate):
     else:
         return []
 
-# Process IR LED signal and extract IBI values
+# Step 4: Process IR LED signal and extract IBI values
 def process_ir_led_signal(ir_led_data, sample_rate=125):
+    # Apply bandpass filter to clean up noise
     filtered_data = bandpass_filter(ir_led_data, lowcut=0.67, highcut=3.0, sample_rate=sample_rate)
+    
+    # Detect peaks in the filtered signal
     peaks = detect_peaks(filtered_data, sample_rate)
+    
+    # Calculate IBI values
     ibi_intervals = calculate_ibi_from_peaks(peaks, sample_rate)
     return ibi_intervals
 
-# Helper functions
+# Helper functions to process the LED data
 def process_led_data(led_data: str):
+    """ Convert the LED data from string to a list of integers """
     return [int(i) for i in led_data.split(',') if i.isnumeric()]
 
+# Helper to make data JSON serializable
 def make_serializable(data):
     if isinstance(data, dict):
         return {k: make_serializable(v) for k, v in data.items()}
@@ -63,20 +71,20 @@ def make_serializable(data):
     return data
 
 # Load the LSTM model and scaler
-lstm_model = load_model('models/lstm_model_ms_seq_10.h5')
-scaler = joblib.load('models/scaler_ms_seq_10.pkl')
+lstm_model = load_model('models/lstm_model_ms_seq_10_new.h5',compile=False)
+scaler = joblib.load('models/scaler_ms_seq_10_new.pkl')
 
 # Load the Random Forest model
 rf_model = joblib.load('models/random_forest_model_detected_peaks.pkl')
 
-# Prepare sequences for LSTM
+# Prepare IBI sequences for LSTM model input
 def prepare_lstm_data(ibi_values, sequence_length=10):
     sequences = []
     for i in range(len(ibi_values) - sequence_length):
         sequences.append(ibi_values[i:i + sequence_length])
     return np.array(sequences)
 
-# Prepare sequences for RF
+# Prepare IBI sequences for Random Forest input
 def prepare_rf_data(ibi_values, sequence_length=10):
     X = []
     for i in range(len(ibi_values) - sequence_length):
@@ -85,53 +93,61 @@ def prepare_rf_data(ibi_values, sequence_length=10):
 
 # Predict IBI values using the LSTM model
 def predict_lstm(ibi_values, sequence_length=10):
-    ibi_values = np.array(ibi_values).reshape(-1, 1)
+    ibi_values = np.array(ibi_values).reshape(-1, 1)  # Reshape to (n_samples, 1)
     ibi_scaled = scaler.transform(ibi_values)
     X_sequences = prepare_lstm_data(ibi_scaled, sequence_length=sequence_length)
+    
     if X_sequences.size == 0:
-        return np.array([])
+        return np.array([])  # Return empty array if no sequences are available
+    
     y_pred_scaled = lstm_model.predict(X_sequences)
     y_pred = scaler.inverse_transform(y_pred_scaled).flatten()
+    
     return y_pred
 
 # Predict IBI values using the Random Forest model
 def predict_rf(ibi_values, sequence_length=10):
-    ibi_values = np.array(ibi_values).reshape(-1, 1)
+    ibi_values = np.array(ibi_values).reshape(-1, 1)  # Reshape to (n_samples, 1)
     X_sequences = prepare_rf_data(ibi_values.flatten(), sequence_length=sequence_length)
+    
     if X_sequences.size == 0:
-        return np.array([])
+        return np.array([])  # Return empty array if no sequences are available
+    
     y_pred = rf_model.predict(X_sequences)
+    
     return y_pred
-
-# Calculate RMSE
-def calculate_rmse(actual, predicted):
-    if len(actual) == len(predicted) and len(actual) > 0:
-        return np.sqrt(mean_squared_error(actual, predicted))
-    return None
 
 # Calculate Heart Rate from IBI values
 def calculate_hr(ibi_values):
     ibi_values = np.array(ibi_values)
-    if len(ibi_values) > 0:
-        hr = 60000 / ibi_values  # Convert IBI to BPM
-        return hr
-    return np.array([])
+    hr = 60000 / ibi_values  # HR in BPM
+    return hr
 
-# Main route
+# Helper function to get a single HR value (mean or median)
+def get_single_hr_value(hr_values):
+    if len(hr_values) > 0:
+        return np.mean(hr_values)  # You can change this to np.median(hr_values) if needed
+    return None
+
+# Main route to process MongoDB data, calculate IBI values, and make predictions using both LSTM and Random Forest
 @app.get("/process-mongodb-data")
 def process_mongodb_data():
     try:
+        # Retrieve data from MongoDB
         data_cursor = collection.find({})
         data_list = list(data_cursor)
 
         if not data_list:
             raise HTTPException(status_code=404, detail="No data found in MongoDB")
 
+        # Convert MongoDB data to pandas DataFrame
         df = pd.DataFrame(data_list)
+
+        # Process each LED data column (IRLED) and calculate IBI values
         df['IRLED_processed'] = df['IRLED'].apply(process_led_data)
         df['IBI_values'] = df['IRLED_processed'].apply(lambda ir_led: process_ir_led_signal(ir_led, sample_rate=125))
 
-        # Predictions
+        # Predict IBI values using LSTM and Random Forest
         df['Predicted_IBI_LSTM'] = df['IBI_values'].apply(lambda ibi: predict_lstm(ibi, sequence_length=10) if len(ibi) >= 10 else [])
         df['Predicted_IBI_RF'] = df['IBI_values'].apply(lambda ibi: predict_rf(ibi, sequence_length=10) if len(ibi) >= 10 else [])
 
@@ -140,24 +156,34 @@ def process_mongodb_data():
         df['Predicted_HR_List_LSTM'] = df['Predicted_IBI_LSTM'].apply(lambda ibi: calculate_hr(ibi) if len(ibi) > 0 else [])
         df['Predicted_HR_List_RF'] = df['Predicted_IBI_RF'].apply(lambda ibi: calculate_hr(ibi) if len(ibi) > 0 else [])
 
-        # Calculate overall RMSE for Heart Rate predictions
-        rmse_lstm = calculate_rmse(df['Actual_HR_List'].explode(), df['Predicted_HR_List_LSTM'].explode())
-        rmse_rf = calculate_rmse(df['Actual_HR_List'].explode(), df['Predicted_HR_List_RF'].explode())
+        # Get a single HR value (mean or median)
+        df['Actual_HR'] = df['Actual_HR_List'].apply(get_single_hr_value)
+        df['Predicted_HR_LSTM'] = df['Predicted_HR_List_LSTM'].apply(get_single_hr_value)
+        df['Predicted_HR_RF'] = df['Predicted_HR_List_RF'].apply(get_single_hr_value)
 
-        # Get a single HR value (mean)
-        df['Actual_HR'] = df['Actual_HR_List'].apply(lambda hr_list: np.mean(hr_list) if len(hr_list) > 0 else None)
-        df['Predicted_HR_LSTM'] = df['Predicted_HR_List_LSTM'].apply(lambda hr_list: np.mean(hr_list) if len(hr_list) > 0 else None)
-        df['Predicted_HR_RF'] = df['Predicted_HR_List_RF'].apply(lambda hr_list: np.mean(hr_list) if len(hr_list) > 0 else None)
+        # Filter out records with valid HR values for RMSE calculation
+        valid_records = df.dropna(subset=['Actual_HR', 'Predicted_HR_LSTM', 'Predicted_HR_RF'])
+        valid_hr_records_count = len(valid_records)
+
+        # Calculate RMSE for LSTM and RF predictions
+        rmse_lstm = math.sqrt(mean_squared_error(valid_records['Actual_HR'], valid_records['Predicted_HR_LSTM']))
+        rmse_rf = math.sqrt(mean_squared_error(valid_records['Actual_HR'], valid_records['Predicted_HR_RF']))
 
         # Select relevant columns for response
-        processed_data = df[['DeviceID', 'DateTime', 'IBI_values', 'Predicted_IBI_LSTM', 'Predicted_IBI_RF', 
-                             'Actual_HR', 'Predicted_HR_LSTM', 'Predicted_HR_RF']].to_dict(orient='records')
+        processed_data = df[['DeviceID', 'DateTime', 'IBI_values', 'Predicted_IBI_LSTM', 'Predicted_IBI_RF', 'Actual_HR', 'Predicted_HR_LSTM', 'Predicted_HR_RF']].to_dict(orient='records')
 
         # Convert to serializable structure
         serialized_data = make_serializable(processed_data)
 
-        return {"status": "success", "processed_data": serialized_data, "overall_rmse_lstm": rmse_lstm, "overall_rmse_rf": rmse_rf}
+        return {
+            "status": "success",
+            "processed_data": serialized_data,
+            "overall_rmse": {
+                "LSTM": rmse_lstm,
+                "RF": rmse_rf
+            },
+            "valid_hr_records_count": valid_hr_records_count
+        }
 
     except Exception as e:
-        print("Error encountered:", str(e))
         raise HTTPException(status_code=500, detail=f"Error processing data: {str(e)}")

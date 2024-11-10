@@ -71,7 +71,9 @@
 
   <main class="container">
     <h1>LSTM and RF Predictions</h1>
-    
+
+   
+
     <!-- Table to display the processed data -->
     <table id="data-table">
       <thead>
@@ -90,6 +92,14 @@
         <!-- Dynamic data will go here -->
       </tbody>
     </table>
+
+    <!-- RMSE Display Section -->
+    <div id="rmse-section" style="margin-top: 20px;">
+      <h2>Overall RMSE for Heart Rate Predictions</h2>
+      <p id="rmse-lstm">LSTM RMSE: Loading...</p>
+      <p id="rmse-rf">RF RMSE: Loading...</p>
+      <p id="valid-records">Valid HR Records for Comparison: Loading...</p>
+    </div>
 
     <!-- Div for the scatter plot of Actual IBI vs Predicted IBI -->
     <h2>Predicted IBI values (LSTM and RF)</h2>
@@ -124,6 +134,11 @@
           document.getElementById('data-table').innerHTML = "No data available.";
           return;
         }
+
+        // Display RMSE values and valid HR record count
+        document.getElementById("rmse-lstm").innerText = `LSTM RMSE: ${data.overall_rmse.LSTM ? data.overall_rmse.LSTM.toFixed(2) : "N/A"}`;
+        document.getElementById("rmse-rf").innerText = `RF RMSE: ${data.overall_rmse.RF ? data.overall_rmse.RF.toFixed(2) : "N/A"}`;
+        document.getElementById("valid-records").innerText = `Valid HR Records for Comparison: ${data.valid_hr_records_count}`;
 
         // Populate the table with data
         const tableBody = document.querySelector("#data-table tbody");
