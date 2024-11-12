@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,7 +15,8 @@
       margin-bottom: 20px;
     }
 
-    th, td {
+    th,
+    td {
       border: 1px solid #ddd;
       padding: 12px;
       text-align: center;
@@ -54,6 +56,7 @@
     }
   </style>
 </head>
+
 <body>
 
   <!-- Navigation Bar to maintain coherence across pages -->
@@ -64,7 +67,7 @@
         <li><a href="/">Health Dashboard</a></li>
         <li><a href="/detailhealth.html">Health Overview</a></li>
         <li><a href="#prediction-results">Anomaly Detection</a></li>
-        <li><a href="/irled.html">LSTM and RF Predictions</a></li> 
+        <li><a href="/irled.html">LSTM and RF Predictions</a></li>
       </ul>
     </nav>
   </header>
@@ -72,7 +75,7 @@
   <main class="container">
     <h1>LSTM and RF Predictions</h1>
 
-   
+
 
     <!-- Table to display the processed data -->
     <table id="data-table">
@@ -121,13 +124,22 @@
 
         // Fetch the processed data from the backend
         const response = await fetch('/process-mongodb-data');
-        
+
         if (!response.ok) {
           throw new Error(`Error: ${response.statusText}`);
         }
 
-        const data = await response.json();
+        var data = await response.json();
         console.log("Data received:", data);
+
+        // Extract `DeviceID` from the query string
+        const urlParams = new URLSearchParams(window.location.search);
+        const deviceID = urlParams.get('DeviceID');
+
+        // Filter `processed_data` based on `DeviceID`
+        var filterdData = data.processed_data.filter(item => item.DeviceID === deviceID);
+        data.processed_data = filterdData;
+        console.log("filterd Data", data);
 
         if (!data || !data.processed_data || data.processed_data.length === 0) {
           console.error("No processed data available");
@@ -278,4 +290,5 @@
   </script>
 
 </body>
+
 </html>

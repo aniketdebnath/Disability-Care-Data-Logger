@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Health Data Display</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="logo">Health Tracker</div>
+            <ul class="nav-links">
+                <li><a href="/">Client List</a></li>
+                <li><a href="/detailhealth.html">Health Overview</a></li>
+                <li><a href="#prediction-results">Anomaly Detection</a></li> <!-- New Tab -->
+                <li><a href="/irled.html">LSTM and RF Predictions</a></li> 
+                
+            </ul>
+        </nav>
+    </header>
+    <main class="container">
+        <section id="heart-rate" class="data-block">
+            <h2>Heart Rate</h2>
+            <p>Loading...</p>
+        </section>
+        <section id="oxygen-saturation" class="data-block">
+            <h2>Oxygen Saturation</h2>
+            <p>Loading...</p>
+        </section>
+        <section id="accelerometer-data" class="data-block">
+            <h2>Accelerometer Data</h2>
+            <p>Ax: <span id="ax">Loading...</span></p>
+            <p>Ay: <span id="ay">Loading...</span></p>
+            <p>Az: <span id="az">Loading...</span></p>
+        </section>
+        
+        <!-- New Prediction Results Section -->
+        <section id="prediction-results" class="data-block">
+            <h2>Prediction Results</h2>
+            <div id="predictions-container" class="predictions-grid">
+                <div class="prediction-card">
+                    <h3>SVM Prediction</h3>
+                    <p id="svm-prediction">Loading...</p>
+                    <small id="svm-confidence">Confidence: N/A</small>
+                </div>
+                <div class="prediction-card">
+                    <h3>Random Forest Prediction</h3>
+                    <p id="rf-prediction">Loading...</p>
+                    <small id="rf-confidence">Confidence: N/A</small>
+                </div>
+                <div class="prediction-card">
+                    <h3>KNN Prediction</h3>
+                    <p id="knn-prediction">Loading...</p>
+                    <small id="knn-confidence">Confidence: N/A</small>
+                </div>
+            </div>
+        </section>
+    </main>
+    <script src="health-data.js"></script>
+</body>
+</html>

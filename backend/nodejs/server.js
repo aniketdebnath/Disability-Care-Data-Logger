@@ -4,6 +4,7 @@ const socketIo = require("socket.io");
 const mongoose = require("mongoose");
 const axios = require("axios");
 const HealthData = require("./health-data"); // Assuming this is your Mongoose model
+const ClientList = require("./client-list"); // Assuming this is your Mongoose model
 
 const app = express();
 const server = http.createServer(app);
@@ -47,24 +48,53 @@ app.get("/process-mongodb-data", async (req, res) => {
 });
 
 // WebSocket connection handling
-io.on("connection", async (socket) => {
+// Route to fetch all clients
+app.get('/api/clients', async (req, res) => {
+  try {
+    const clients = await ClientList.find();
+    res.json(clients);  // Return the client data as JSON
+  } catch (error) {
+    console.error('Error fetching client list:', error);  // Log the actual error
+    res.status(500).json({ error: 'Error fetching client list' });
+  }
+});
+
+// Route to fetch client by deviceID
+app.get('/api/client', async (req, res) => {
+  const { deviceID } = req.query; // Get the deviceID from query parameters
+
+  if (!deviceID) {
+    return res.status(400).json({ error: 'DeviceID query parameter is required' });
+  }
+  
+  try {
+    const clients = await ClientList.find({ DeviceID: deviceID });
+    res.json(clients);  // Return the client data as JSON
+  } catch (error) {
+    console.error('Error fetching client by deviceID:', error);  // Log the actual error
+    res.status(500).json({ error: 'Error fetching client by deviceID' });
+  }
+});
+
+// WebSocket connection
+io.on("connection", (socket) => {
   console.log("New client connected");
   socket.emit("message", "Welcome to the WebSocket server!");
 
-  // Fetch the latest data from MongoDB on connection
-  try {
-    const latestData = await HealthData.findOne().sort({ DateTime: -1 });
-    if (latestData) {
-      socket.emit("healthDataUpdate", latestData);
-    }
-  } catch (err) {
-    console.error("Error fetching latest data:", err);
-  }
+  // Fetch the latest data from MongoDB
+  HealthData.findOne().sort({ DateTime: -1 })
+    .then((latestData) => {
+      if (latestData) {
+        socket.emit("healthDataUpdate", latestData);
+      }
+    })
+    .catch((err) => console.error("Error fetching latest data:", err));
 
   // Watch the MongoDB collection for any new insertions or updates
   const changeStream = HealthData.watch();
 
   changeStream.on("change", async (change) => {
+    console.log("Change detected");
     if (change.operationType === "insert") {
       console.log("New PPG data inserted:", change.fullDocument);
 
@@ -74,7 +104,9 @@ io.on("connection", async (socket) => {
         // Make a request to FastAPI to process the new PPG data
         const response = await axios.post(
           "http://fastapi-app:8000/api/process_and_detect",
-          { GreenLED: ppgData }
+          {
+            GreenLED: ppgData,
+          }
         );
 
         console.log("FastAPI response:", response.data);
@@ -88,6 +120,28 @@ io.on("connection", async (socket) => {
       } catch (err) {
         console.error("Error processing PPG data with FastAPI:", err);
       }
+
+      try {
+        // Make a request to FastAPI to process the new PPG data
+        const response = await axios.post(
+          "http://fastapi-app:8000/process",
+          {
+            GreenLED: ppgData,
+          }
+        );
+
+        console.log("FastAPI response:", response.data);
+
+        // Emit the FastAPI prediction result to all connected clients
+        io.emit("processResult", {
+          ...change.fullDocument,
+          processedData: response.data,
+        });
+        console.log("Process result sent to clients");
+      } catch (err) {
+        console.error("Error processing PPG data with FastAPI:", err);
+      }
+
     }
   });
 

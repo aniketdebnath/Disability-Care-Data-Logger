@@ -1,56 +1,28 @@
-const socket = io();
+// Fetch client list from server
+async function loadClients() {
+    try {
+        const response = await fetch('/api/clients'); // Fetch the client list from an API endpoint
+        const clients = await response.json();
 
-socket.on('connect', () => {
-    console.log('Connected to server');
-});
+        const clientListContainer = document.getElementById('client-list-container');
 
-socket.on('healthDataUpdate', function(data) {
-    console.log('Data received:', data);
-    if (data.HealthData) {
-        updateData('heart-rate', data.HealthData.HeartRate, 'Heart Rate');
-        updateData('oxygen-saturation', data.HealthData.OxygenLevel, 'Oxygen Saturation');
-        updateAccelerometerData(data.HealthData.AccelerometerData);
-    }
-});
-
-// Listen for prediction results and update the prediction section
-socket.on('predictionResult', function(data) {
-    console.log('Prediction result received:', data);
-
-    // Update SVM Prediction
-    document.getElementById('svm-prediction').textContent = data.predictions.svm_prediction;
-    document.getElementById('svm-confidence').textContent = `Confidence: ${data.predictions.svm_confidence.toFixed(2)}`;
-
-    // Update Random Forest Prediction
-    document.getElementById('rf-prediction').textContent = data.predictions.rf_prediction;
-    document.getElementById('rf-confidence').textContent = `Confidence: ${data.predictions.rf_confidence.toFixed(2)}`;
-
-    // Update KNN Prediction
-    document.getElementById('knn-prediction').textContent = data.predictions.knn_prediction;
-    document.getElementById('knn-confidence').textContent = `Confidence: ${data.predictions.knn_confidence.toFixed(2)}`;
-});
-
-function updateData(elementId, value, label) {
-    const element = document.getElementById(elementId);
-    const content = `<h2>${label}</h2><p>Value: ${value}</p>`;
-    element.innerHTML = content;
-}
-
-function updateAccelerometerData(accelData) {
-    if (accelData) {
-        document.getElementById('ax').textContent = accelData.Ax.toFixed(3);
-        document.getElementById('ay').textContent = accelData.Ay.toFixed(3);
-        document.getElementById('az').textContent = accelData.Az.toFixed(3);
+        clients.forEach(client => {
+            const listItem = document.createElement('div');
+            listItem.className = 'client-card';
+            listItem.innerHTML = `
+                <div class="client-details">
+                    <h3>${client.ClientFirstName} ${client.ClientLastName}</h3>
+                    <p><strong>Device ID:</strong> ${client.DeviceID}</p>
+                    <p><strong>Date Created:</strong> ${new Date(client.DateOfCreation).toLocaleDateString()}</p>
+                    <a href="health-data.html?deviceID=${client.DeviceID}" class="view-details-btn">View Health Data</a>
+                </div>
+            `;
+            clientListContainer.appendChild(listItem);
+        });
+    } catch (error) {
+        console.error('Error fetching client list:', error);
     }
 }
 
-socket.on('disconnect', () => {
-    console.log('Disconnected from server');
-});
-
-document.getElementById('detail-link').addEventListener('click', () => {
-    const latestData = localStorage.getItem('latestHealthData');
-    if (latestData) {
-        localStorage.setItem('detailHealthData', latestData);
-    }
-});
+// Call the function to load the clients when the page loads
+window.onload = loadClients;
