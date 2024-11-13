@@ -34,7 +34,7 @@ services:
       - ./backend/nodejs:/app
     environment:
       - NODE_ENV=development
-      - MONGO_URI=mongodb+srv://FYPUSERS:k1iTgwyFFzGlAkeN@fyptestdb.d7zdlnq.mongodb.net/TestAniket
+      - MONGO_URI=mongodb+srv://FYPUSERS:k1iTgwyFFzGlAkeN@fyptestdb.d7zdlnq.mongodb.net/FYPData
     depends_on:
       - fastapi-app
       - fastapi-app2
