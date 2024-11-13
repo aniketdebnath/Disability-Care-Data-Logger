@@ -1,22 +1,26 @@
+import os
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score, GridSearchCV
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
-from sklearn.model_selection import StratifiedKFold, cross_val_score
-from sklearn.model_selection import GridSearchCV
 import joblib
 
-# Load your processed ECG data
-data_path = r'A:\AnomalyDetection\mit-bih-project\data\processed\combined_beat_data.csv'
+# Set the directory to save models and scalers
+model_dir = r'A:\AnomalyDetection\mit-bih-project2\models'
+os.makedirs(model_dir, exist_ok=True)
+
+# Load your processed data
+data_path = r'A:\AnomalyDetection\mit-bih-project2\data\processed\new_combined_beat_data.csv'
 df = pd.read_csv(data_path)
 
-# Optional: Drop any rows with missing values (NaN)
+# Drop rows with missing values (NaN)
 df.dropna(inplace=True)
 
 # Define features (X) and labels (y)
-X = df[['RR_Interval', 'HeartRate', 'QRS_Duration', 'P_Wave_Duration', 'QT_Interval']]
+features = ['RR_Interval', 'HeartRate', 'SDNN', 'SDSD']
+X = df[features]
 y = df['Label']  # 1 for abnormal, 0 for normal
 
 # Split the dataset into training and testing sets
@@ -27,15 +31,23 @@ scaler = StandardScaler()
 X_train = scaler.fit_transform(X_train)
 X_test = scaler.transform(X_test)
 
-# Train an SVM classifier
-svm_model = SVC(kernel='rbf', C=10, gamma=1, class_weight='balanced')  # Radial basis function kernel
+# Save the scaler
+scaler_path = os.path.join(model_dir, 'svm_scaler.pkl')
+joblib.dump(scaler, scaler_path)
+print(f"Scaler saved to {scaler_path}")
+
+# Train an SVM classifier with the best known parameters
+svm_model = SVC(kernel='rbf', C=10, gamma=1, class_weight='balanced')
 svm_model.fit(X_train, y_train)
 
-# Predict on the test set
-y_pred = svm_model.predict(X_test)
+# Save the trained SVM model
+model_path = os.path.join(model_dir, 'svm_model_joblib.pkl')
+joblib.dump(svm_model, model_path)
+print(f"Model saved to {model_path}")
 
 # Evaluate the model
-print("Confusion Matrix:")
+y_pred = svm_model.predict(X_test)
+print("\nConfusion Matrix:")
 print(confusion_matrix(y_test, y_pred))
 
 print("\nClassification Report:")
@@ -43,52 +55,30 @@ print(classification_report(y_test, y_pred))
 
 print("\nAccuracy:", accuracy_score(y_test, y_pred))
 
-joblib.dump(scaler, 'svm_scaler.pkl')  # Save the scaler
+# --- Sample Prediction Section ---
 
-# Save the trained SVM model to a .pkl file using joblib
-joblib.dump(svm_model, 'svm_model_joblib.pkl')
-print("Model saved to svm_model_joblib.pkl")
+# Load scaler and model for sample prediction
+loaded_scaler = joblib.load(scaler_path)
+loaded_model = joblib.load(model_path)
 
-# Step 1: Cross-Fold Validation
-# skf = StratifiedKFold(n_splits=5)
-# scores = cross_val_score(svm_model, X_train, y_train, cv=skf, scoring='accuracy')
-# print("Cross-validated scores:", scores)
+# Define a sample data point with explicit column order
+sample_data = pd.DataFrame([{
+    'RR_Interval': 0.984,
+    'HeartRate': 64.126,
+    'SDNN': 181.66 / 1000,  # Adjust scaling if needed
+    'SDSD': 199.54 / 1000   # Adjust scaling if needed
+}], columns=features)  # Ensure correct column order
 
-# Step 2: Grid Search for Hyperparameter Tuning
-# perform_grid_search = input("\nDo you want to perform GridSearchCV for hyperparameter tuning? (yes/no): ").lower()
+# Scale the sample data
+sample_scaled = loaded_scaler.transform(sample_data)
 
-# if perform_grid_search == 'yes':
-#     print("\nPerforming GridSearchCV for hyperparameter tuning...")
-    
-#     # Define parameter grid for GridSearchCV
-#     param_grid = {
-#         'C': [0.1, 1, 10],
-#         'gamma': ['scale', 'auto', 0.1, 1],
-#         'kernel': ['rbf']  # Using RBF kernel for SVM
-#     }
-    
-#     # Initialize GridSearchCV with 5-fold cross-validation (you can change `cv` value)
-#     grid = GridSearchCV(SVC(class_weight='balanced'), param_grid, refit=True, cv=2, verbose=2)
+# Predict
+sample_prediction = loaded_model.predict(sample_scaled)
+sample_prediction_label = 'Abnormal' if sample_prediction[0] == 1 else 'Normal'
+print(f"\nPrediction for sample data: {sample_prediction_label}")
+# Debugging the scaled input within the API or test
+print("Scaled input values (SVM):", sample_scaled)
 
-#     # Perform grid search on the training data
-#     grid.fit(X_train, y_train)
-
-#     # Get the best hyperparameters
-#     print("Best parameters found by GridSearchCV:", grid.best_params_)
-
-#     # Evaluate the grid search model on the test set
-#     y_pred_grid = grid.best_estimator_.predict(X_test)
-
-#     # Evaluate the grid search model
-#     print("\nConfusion Matrix (GridSearchCV Model):")
-#     print(confusion_matrix(y_test, y_pred_grid))
-
-#     print("\nClassification Report (GridSearchCV Model):")
-#     print(classification_report(y_test, y_pred_grid))
-
-#     print("\nAccuracy (GridSearchCV Model):", accuracy_score(y_test, y_pred_grid))
-
-# else:
-#     print("Skipping GridSearchCV...")
-
-# Best parameters found by GridSearchCV: {'C': 10, 'gamma': 1, 'kernel': 'rbf'}
+# Compare the SVM confidence score
+svm_confidence_score = svm_model.decision_function(sample_scaled)
+print("SVM confidence score:", svm_confidence_score)

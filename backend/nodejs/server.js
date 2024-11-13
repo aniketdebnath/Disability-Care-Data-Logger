@@ -19,6 +19,10 @@ app.get("/detailHealth.html", (req, res) => {
   res.sendFile(__dirname + "/public/detailHealth.html");
 });
 
+app.get("/irled.html", (req, res) => {
+  res.sendFile(__dirname + "/public/irled.html");
+});
+
 // Route to fetch health data from MongoDB
 app.get("/health-data", async (req, res) => {
   try {
@@ -27,6 +31,20 @@ app.get("/health-data", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).send("Error fetching data");
+  }
+});
+
+// Route to fetch processed MongoDB data from FastAPI
+app.get("/process-mongodb-data", async (req, res) => {
+  try {
+    // Fetch data from FastAPI using Docker service name
+    const response = await axios.get(
+      "http://fastapi-app2:8001/process-mongodb-data"
+    );
+    res.json(response.data);
+  } catch (err) {
+    console.error("Error fetching MongoDB data:", err.message);
+    res.status(500).send("Error fetching MongoDB data");
   }
 });
 
@@ -50,14 +68,14 @@ io.on("connection", async (socket) => {
     if (change.operationType === "insert") {
       console.log("New PPG data inserted:", change.fullDocument);
 
-      const ppgData = change.fullDocument.GreenLED;
+      const ppgData = change.fullDocument.IRLED;
 
       try {
         // Make a request to FastAPI to process the new PPG data
         const response = await axios.post(
-          "http://fastapi-app:8000/api/process_and_detect",
+          "http://fastapi-app:8000/process_and_detect",
           {
-            GreenLED: ppgData,
+            IRLED: ppgData,
           }
         );
 

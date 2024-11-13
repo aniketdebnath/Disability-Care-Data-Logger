@@ -1,17 +1,26 @@
 server {
     listen 80;
-    server_name 3.27.219.6;  # Use localhost for local testing
+    server_name localhost;  # Use localhost for local testing
 
-    # Proxy requests to the FastAPI app
-    location /api {
-        proxy_pass http://fastapi-app:8000;  # FastAPI service
+    # Proxy requests to the first FastAPI app at /api
+    location /api/ {
+        proxy_pass http://fastapi-app:8000;  # First FastAPI service
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # Proxy requests to the Node.js app
+    # Proxy requests to the second FastAPI app at /api2
+    location /api2/ {
+        proxy_pass http://fastapi-app2:8001;  # Second FastAPI service
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Proxy requests to the Node.js app at /
     location / {
         proxy_pass http://nodejs-app:3000;  # Node.js service
         proxy_set_header Host $host;

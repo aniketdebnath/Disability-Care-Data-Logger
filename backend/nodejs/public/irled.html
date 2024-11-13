@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LSTM and RF Predictions</title>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* Table styles */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 12px;
+      text-align: center;
+    }
+
+    th {
+      background-color: #025f99;
+      color: white;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f2f2f2;
+    }
+
+    tr:hover {
+      background-color: #e9f5ff;
+    }
+
+    td {
+      font-size: 14px;
+    }
+
+    /* Styling for large cell data */
+    td.large-cell {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 150px;
+      cursor: pointer;
+    }
+
+    /* CSS for expanded row */
+    tr.expanded td.large-cell {
+      white-space: normal;
+      overflow: visible;
+      text-overflow: unset;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation Bar to maintain coherence across pages -->
+  <header>
+    <nav class="navbar">
+      <div class="logo">Health Tracker</div>
+      <ul class="nav-links">
+        <li><a href="/">Health Dashboard</a></li>
+        <li><a href="/detailhealth.html">Health Overview</a></li>
+        <li><a href="#prediction-results">Anomaly Detection</a></li>
+        <li><a href="/irled.html">LSTM and RF Predictions</a></li> 
+      </ul>
+    </nav>
+  </header>
+
+  <main class="container">
+    <h1>LSTM and RF Predictions</h1>
+
+   
+
+    <!-- Table to display the processed data -->
+    <table id="data-table">
+      <thead>
+        <tr>
+          <th>DeviceID</th>
+          <th>DateTime</th>
+          <th>Actual HR</th>
+          <th>Predicted HR LSTM</th>
+          <th>Predicted HR RF</th>
+          <th>IBI Values</th>
+          <th>Predicted IBI LSTM</th>
+          <th>Predicted IBI RF</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Dynamic data will go here -->
+      </tbody>
+    </table>
+
+    <!-- RMSE Display Section -->
+    <div id="rmse-section" style="margin-top: 20px;">
+      <h2>Overall RMSE for Heart Rate Predictions</h2>
+      <p id="rmse-lstm">LSTM RMSE: Loading...</p>
+      <p id="rmse-rf">RF RMSE: Loading...</p>
+      <p id="valid-records">Valid HR Records for Comparison: Loading...</p>
+    </div>
+
+    <!-- Div for the scatter plot of Actual IBI vs Predicted IBI -->
+    <h2>Predicted IBI values (LSTM and RF)</h2>
+    <div id="ibi-scatter-plot" style="width:100%;height:500px;"></div>
+
+    <!-- Div for the Average IBI vs Average Predicted IBI -->
+    <h2>Average IBI vs Average Predicted IBI for Each Reading</h2>
+    <div id="avg-ibi-plot" style="width:100%;height:500px;"></div>
+
+    <!-- Div for the Heart Rate Graph -->
+    <h2>Actual vs Predicted Heart Rate (LSTM and RF)</h2>
+    <div id="hr-plot" style="width:100%;height:500px;"></div>
+  </main>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", async function () {
+      try {
+        console.log("Fetching processed data from backend...");
+
+        // Fetch the processed data from the backend
+        const response = await fetch('/process-mongodb-data');
+        
+        if (!response.ok) {
+          throw new Error(`Error: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        console.log("Data received:", data);
+
+        if (!data || !data.processed_data || data.processed_data.length === 0) {
+          console.error("No processed data available");
+          document.getElementById('data-table').innerHTML = "No data available.";
+          return;
+        }
+
+        // Display RMSE values and valid HR record count
+        document.getElementById("rmse-lstm").innerText = `LSTM RMSE: ${data.overall_rmse.LSTM ? data.overall_rmse.LSTM.toFixed(2) : "N/A"}`;
+        document.getElementById("rmse-rf").innerText = `RF RMSE: ${data.overall_rmse.RF ? data.overall_rmse.RF.toFixed(2) : "N/A"}`;
+        document.getElementById("valid-records").innerText = `Valid HR Records for Comparison: ${data.valid_hr_records_count}`;
+
+        // Populate the table with data
+        const tableBody = document.querySelector("#data-table tbody");
+        data.processed_data.forEach(item => {
+          const row = `
+            <tr class="expandable-row">
+              <td>${item.DeviceID}</td>
+              <td>${item.DateTime}</td>
+              <td>${item.Actual_HR ? item.Actual_HR.toFixed(2) : 'N/A'}</td>
+              <td>${item.Predicted_HR_LSTM ? item.Predicted_HR_LSTM.toFixed(2) : 'N/A'}</td>
+              <td>${item.Predicted_HR_RF ? item.Predicted_HR_RF.toFixed(2) : 'N/A'}</td>
+              <td class="large-cell" title="${item.IBI_values.join(', ')}">${item.IBI_values.join(', ')}</td>
+              <td class="large-cell" title="${item.Predicted_IBI_LSTM.join(', ')}">${item.Predicted_IBI_LSTM.join(', ')}</td>
+              <td class="large-cell" title="${item.Predicted_IBI_RF.join(', ')}">${item.Predicted_IBI_RF.join(', ')}</td>
+            </tr>
+          `;
+          tableBody.innerHTML += row;
+        });
+
+        // Add click event listener to expand/collapse rows
+        document.querySelectorAll('.expandable-row').forEach(row => {
+          row.addEventListener('click', function () {
+            this.classList.toggle('expanded');
+          });
+        });
+
+        // Generate scatter plot for IBI values (Actual vs Predicted - LSTM and RF)
+        const ibiScatterTraces = data.processed_data.map((item, index) => {
+          const actualIBI = item.IBI_values.slice(10);
+          const predictedIBILSTM = item.Predicted_IBI_LSTM;
+          const predictedIBIRF = item.Predicted_IBI_RF;
+
+          if (actualIBI.length !== predictedIBILSTM.length || actualIBI.length !== predictedIBIRF.length) {
+            console.warn(`Mismatched lengths for IBI data in record ${index + 1}`);
+            return null;
+          }
+
+          return [{
+            x: actualIBI,
+            y: predictedIBILSTM,
+            mode: 'markers',
+            name: `LSTM - Reading ${index + 1}`,
+            type: 'scatter',
+            marker: { size: 12, symbol: 'circle', color: 'blue' }
+          }, {
+            x: actualIBI,
+            y: predictedIBIRF,
+            mode: 'markers',
+            name: `RF - Reading ${index + 1}`,
+            type: 'scatter',
+            marker: { size: 12, symbol: 'square', color: 'red' }
+          }];
+        }).flat().filter(Boolean);
+
+        // Render the scatter plot for Actual IBI vs Predicted IBI
+        Plotly.newPlot('ibi-scatter-plot', ibiScatterTraces, {
+          title: 'Predicted IBI Values (LSTM and RF)',
+          xaxis: { title: 'Actual IBI Values (ms)' },
+          yaxis: { title: 'Predicted IBI Values (ms)' }
+        });
+
+        // Generate plot for Average IBI vs Average Predicted IBI per reading
+        const avgActualIBIValues = data.processed_data.map(item => {
+          const actualIBI = item.IBI_values.slice(10);
+          return actualIBI.length ? actualIBI.reduce((a, b) => a + b) / actualIBI.length : 0;
+        });
+
+        const avgPredictedIBILSTMValues = data.processed_data.map(item => {
+          const predictedIBI = item.Predicted_IBI_LSTM;
+          return predictedIBI.length ? predictedIBI.reduce((a, b) => a + b) / predictedIBI.length : 0;
+        });
+
+        const avgPredictedIBIRFValues = data.processed_data.map(item => {
+          const predictedIBI = item.Predicted_IBI_RF;
+          return predictedIBI.length ? predictedIBI.reduce((a, b) => a + b) / predictedIBI.length : 0;
+        });
+
+        const avgIBIData = [{
+          x: data.processed_data.map((_, index) => `Reading ${index + 1}`),
+          y: avgActualIBIValues,
+          name: 'Avg Actual IBI',
+          type: 'bar',
+          marker: { color: 'blue' }
+        }, {
+          x: data.processed_data.map((_, index) => `Reading ${index + 1}`),
+          y: avgPredictedIBILSTMValues,
+          name: 'Avg Predicted IBI (LSTM)',
+          type: 'bar',
+          marker: { color: 'green' }
+        }, {
+          x: data.processed_data.map((_, index) => `Reading ${index + 1}`),
+          y: avgPredictedIBIRFValues,
+          name: 'Avg Predicted IBI (RF)',
+          type: 'bar',
+          marker: { color: 'red' }
+        }];
+
+        Plotly.newPlot('avg-ibi-plot', avgIBIData, {
+          title: 'Average IBI vs Average Predicted IBI per Reading',
+          xaxis: { title: 'Readings' },
+          yaxis: { title: 'Average IBI (ms)' },
+          barmode: 'group'
+        });
+
+        // Scatter plot for Actual vs Predicted Heart Rate (LSTM and RF)
+        const hrScatterTraces = [{
+          x: data.processed_data.map(item => item.DateTime),
+          y: data.processed_data.map(item => item.Actual_HR),
+          mode: 'markers',
+          name: 'Actual HR',
+          marker: { color: 'blue', size: 12 }
+        }, {
+          x: data.processed_data.map(item => item.DateTime),
+          y: data.processed_data.map(item => item.Predicted_HR_LSTM),
+          mode: 'markers',
+          name: 'Predicted HR (LSTM)',
+          marker: { color: 'green', size: 12 }
+        }, {
+          x: data.processed_data.map(item => item.DateTime),
+          y: data.processed_data.map(item => item.Predicted_HR_RF),
+          mode: 'markers',
+          name: 'Predicted HR (RF)',
+          marker: { color: 'red', size: 12 }
+        }];
+
+        Plotly.newPlot('hr-plot', hrScatterTraces, {
+          title: 'Actual vs Predicted Heart Rate (LSTM and RF)',
+          xaxis: { title: 'DateTime' },
+          yaxis: { title: 'Heart Rate (BPM)' }
+        });
+
+      } catch (error) {
+        console.error("Error fetching or displaying data:", error);
+        document.getElementById('data-table').innerHTML = "Error fetching data.";
+      }
+    });
+  </script>
+
+</body>
+</html>
