@@ -69,7 +69,38 @@ def process_ppg_signal(ir_led_data_str):
             sdsd = None
 
         # Return the processed data without ibi
-        return rr_interval, heart_rate, sdnn/1000, sdsd/1000
+        return rr_interval, heart_rate, sdnn / 1000, sdsd / 1000
 
     except Exception as e:
         raise ValueError(f"Error processing PPG signal: {e}")
+
+
+# New function for calculating heart rate and SpO2
+def calculate_heart_rate_and_spo2(ir_led_data_str, red_led_data_str):
+    try:
+        ir_data = np.array([int(x) for x in ir_led_data_str.split(',') if x.isdigit()])
+        red_data = np.array([int(x) for x in red_led_data_str.split(',') if x.isdigit()])
+
+        # Ensure enough data points for analysis
+        if len(ir_data) < 125 or len(red_data) < 125:
+            raise ValueError("Not enough data points for heart rate or SpO2 analysis")
+
+        # Step 1: Bandpass filter to reduce noise
+        filtered_ir = bandpass_filter(ir_data, lowcut=0.67, highcut=3, sample_rate=125)
+        filtered_red = bandpass_filter(red_data, lowcut=0.67, highcut=3, sample_rate=125)
+
+        # Step 2: Detect peaks in the IR signal to calculate heart rate
+        ir_peaks = detect_peaks(filtered_ir, sample_rate=125)
+        ibi_intervals = calculate_ibi(ir_peaks, sample_rate=125)
+        _, heart_rate, _, _ = calculate_heart_rate_metrics(ibi_intervals)
+
+        # Step 3: Calculate SpO2 based on IR and Red data (simplified model)
+        # Use ratio of variances as a proxy for oxygen saturation
+        ir_ac = np.std(filtered_ir)
+        red_ac = np.std(filtered_red)
+        spo2 = 100 - (5 * ((red_ac / np.mean(red_data)) / (ir_ac / np.mean(ir_data))))
+
+        return heart_rate, spo2
+
+    except Exception as e:
+        raise ValueError(f"Error in calculating heart rate and SpO2: {e}")

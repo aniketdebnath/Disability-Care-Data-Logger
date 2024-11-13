@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from ml_service import process_signal  # Traditional models
-from process_service import process_ppg_signal  # Traditional signal processing
+from process_service import process_ppg_signal, calculate_heart_rate_and_spo2  # Traditional signal processing and new heart rate and SpO2 calculation
 from lstm_process_service import process_bvp_signal  # LSTM-specific signal processing
 from lstm_service import predict_lstm  # LSTM prediction
 
@@ -10,6 +10,7 @@ app = FastAPI()
 # Define input schema for raw PPG signal
 class PPGSignalInput(BaseModel):
     IRLED: str
+    RedLED: str  # Added RedLED data for SpO2 calculation
 
 # Define input schema for ML model
 class PPGProcessedData(BaseModel):
@@ -26,6 +27,8 @@ class PredictionResponse(BaseModel):
     lstm_prediction: str
     lstm_confidence: float
     explanation: str
+    heart_rate: float  # Include heart_rate in response
+    spo2: float  # Include SpO2 in response
     message: str
 
 # Automate Process and Prediction for both traditional and LSTM
@@ -54,7 +57,10 @@ def process_and_detect(signal: PPGSignalInput):
         lstm_prediction = lstm_result["lstm_prediction"] if "lstm_prediction" in lstm_result else "Unknown"
         lstm_confidence = lstm_result["confidence_score"] if "confidence_score" in lstm_result else 0.0
 
-        # Combine results from traditional and LSTM models
+        # Step 5: Calculate SpO2 and heart rate using the RedLED and IRLED signals
+        heart_rate, spo2 = calculate_heart_rate_and_spo2(signal.IRLED, signal.RedLED)
+
+        # Combine results from traditional models, LSTM, and SpO2
         return {
             "combined_prediction": traditional_result["combined_prediction"],
             "reliability_score": traditional_result["reliability_score"],
@@ -62,6 +68,8 @@ def process_and_detect(signal: PPGSignalInput):
             "lstm_prediction": lstm_prediction,
             "lstm_confidence": lstm_confidence,
             "explanation": traditional_result["explanation"],
+            "heart_rate": heart_rate,  # Include heart rate
+            "spo2": spo2,  # Include SpO2
             "message": "Combined prediction successful"
         }
     except Exception as e:

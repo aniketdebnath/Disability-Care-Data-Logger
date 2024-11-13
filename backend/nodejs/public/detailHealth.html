@@ -1,62 +1,162 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0" />
     <title>Health Data Overview</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
     <script src="https://cdn.jsdelivr.net/npm/luxon@^3"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@^1"></script>
-    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js"></script>
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/moment@2.29.1/moment.min.js"></script>
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
-    <link rel="stylesheet" href="styles.css">
-    <script src="/socket.io/socket.io.js"></script>
-</head>
-<body>
+    <link
+      rel="stylesheet"
+      href="styles.css" />
+  </head>
+  <body>
     <header>
-        <nav class="navbar">
-            <div class="logo">Health Tracker</div>
-            <ul class="nav-links">
-                <li><a href="/">Health Dashboard</a></li>
-                <li><a href="/index.html">Health Overview</a></li>
-                <li><a href="/index.html#prediction-results">Anomaly Detection</a></li> <!-- New Tab -->
-            </ul>
-        </nav>
+      <nav class="navbar">
+        <div class="logo">Health Tracker</div>
+        <ul class="nav-links">
+          <li><a href="/">Health Dashboard</a></li>
+          <li><a href="/index.html">Health Overview</a></li>
+          <li><a href="/anomalyDetection.html">Anomaly Detection</a></li>
+          <li><a href="/irled.html">Predictive Analysis</a></li>
+        </ul>
+      </nav>
     </header>
     <main class="container">
-        <h1>Health Data Overview</h1>
+      <h1>Health Data Overview</h1>
 
-        <div class="daterange-container">
-            <label for="daterange">Select Date Range:</label>
-            <input type="text" id="daterange" name="daterange" />
-        </div>
+      <!-- Device Selection -->
+      <div>
+        <label for="deviceSelect">Select Device:</label>
+        <select id="deviceSelect"></select>
+        <button id="fetchDataButton">Fetch Data</button>
+      </div>
 
-        <h2>Chart</h2>
-        <div class="chart-container">
-            <canvas id="healthChart"></canvas>
-        </div>
+      <!-- Chart for Heart Rate -->
+      <h2>Heart Rate Chart</h2>
+      <canvas id="healthChart"></canvas>
 
-        <h2>Table</h2>
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Time</th>
-                        <th>Heart Rate (bpm)</th>
-                        <th>Oxygen Saturation (%)</th>
-                        <th>Accelerometer X</th>
-                        <th>Accelerometer Y</th>
-                        <th>Accelerometer Z</th>
-                    </tr>
-                </thead>
-                <tbody id="healthDataTableBody">
-                    <!-- Data will be inserted here -->
-                </tbody>
-            </table>
-        </div>
+      <!-- Table for Health Data -->
+      <h2>Health Data Table</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Heart Rate (bpm)</th>
+            <th>Oxygen Saturation (%)</th>
+            <th>Accelerometer X</th>
+            <th>Accelerometer Y</th>
+            <th>Accelerometer Z</th>
+          </tr>
+        </thead>
+        <tbody id="healthDataTableBody">
+          <!-- Data rows will be added here -->
+        </tbody>
+      </table>
     </main>
-    <script src="detailHealth.js"></script>
-</body>
+
+    <script>
+      const deviceSelect = document.getElementById("deviceSelect");
+      const fetchDataButton = document.getElementById("fetchDataButton");
+      let healthChart;
+
+      // Fetch unique DeviceIDs and populate the select menu
+      fetch("/clients")
+        .then((response) => response.json())
+        .then((devices) => {
+          devices.forEach((deviceID) => {
+            const option = document.createElement("option");
+            option.value = deviceID;
+            option.textContent = deviceID;
+            deviceSelect.appendChild(option);
+          });
+        })
+        .catch((error) => console.error("Error fetching clients:", error));
+
+      // Initialize Chart.js
+      const ctx = document.getElementById("healthChart").getContext("2d");
+      healthChart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: [],
+          datasets: [
+            {
+              label: "Heart Rate",
+              data: [],
+              borderColor: "rgb(255, 99, 132)",
+              backgroundColor: "rgba(255, 99, 132, 0.5)",
+            },
+          ],
+        },
+        options: {
+          scales: {
+            x: {
+              type: "time",
+              time: {
+                unit: "minute",
+                tooltipFormat: "yyyy-MM-dd HH:mm:ss",
+                displayFormats: {
+                  minute: "HH:mm",
+                },
+              },
+              title: {
+                display: true,
+                text: "Time",
+              },
+            },
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: "Heart Rate (bpm)",
+              },
+            },
+          },
+        },
+      });
+
+      // Fetch data for the selected device when the button is clicked
+      fetchDataButton.addEventListener("click", () => {
+        const deviceID = deviceSelect.value;
+        fetch(`/client-health-data/${deviceID}`)
+          .then((response) => response.json())
+          .then((data) => {
+            updateChartAndTable(data);
+          })
+          .catch((error) =>
+            console.error("Error fetching health data:", error)
+          );
+      });
+
+      // Update chart and table with fetched data
+      function updateChartAndTable(data) {
+        const labels = data.map((item) => new Date(item.DateTime));
+        const heartRates = data.map((item) => item.GreenLED); // Replace with heart rate data field
+
+        // Update chart
+        healthChart.data.labels = labels;
+        healthChart.data.datasets[0].data = heartRates;
+        healthChart.update();
+
+        // Update table
+        const tableBody = document.getElementById("healthDataTableBody");
+        tableBody.innerHTML = ""; // Clear previous rows
+        data.forEach((item) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+                    <td>${new Date(item.DateTime).toLocaleString()}</td>
+                    <td>${item.GreenLED}</td>
+                    <td>${item.IRLED}</td>
+                    <td>${item.MPU6050.Ax}</td>
+                    <td>${item.MPU6050.Ay}</td>
+                    <td>${item.MPU6050.Az}</td>
+                `;
+          tableBody.appendChild(row);
+        });
+      }
+    </script>
+  </body>
 </html>
