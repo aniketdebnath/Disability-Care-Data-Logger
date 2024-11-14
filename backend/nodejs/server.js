@@ -3,7 +3,9 @@ const http = require("http");
 const socketIo = require("socket.io");
 const mongoose = require("mongoose");
 const HealthData = require("./health-data"); // HealthData model
+const TuningInformation = require("./tuningInformation"); // Import the TuningInformation schema
 const ProcessedData = require("./processedData"); // ProcessedData model
+
 const axios = require("axios");
 
 const app = express();
@@ -14,6 +16,7 @@ require("./db"); // Ensure your MongoDB connection is established
 
 // Serve static files from the "public" directory
 app.use(express.static("public"));
+app.use(express.json()); // to parse JSON request bodies
 
 // Route to serve detailhealth.html directly
 app.get("/detailHealth.html", (req, res) => {
@@ -35,12 +38,90 @@ app.get("/health-data", async (req, res) => {
   }
 });
 
+app.get("/api/tuning/tuningInformation", async (req, res) => {
+  const { deviceId } = req.query; // Get deviceId from the query parameters
+
+  if (!deviceId) {
+    return res.status(400).send("Device ID is required");
+  }
+
+  try {
+    console.log(
+      "Received request to fetch tuning information for deviceId:",
+      deviceId
+    );
+    console.log("Executing query: { DeviceID: '" + deviceId + "' }");
+
+    // Fetch the tuning information for the specific deviceId
+    const tuningData = await TuningInformation.find({ DeviceID: deviceId }); // Changed findOne to find for multiple
+
+    if (tuningData.length > 0) {
+      console.log("Tuning Data found:", tuningData); // Debugging line
+      res.json(tuningData); // Send the tuning data as a response
+    } else {
+      console.log(`No tuning information found for device: ${deviceId}`); // Debugging line
+      res
+        .status(404)
+        .send(`No tuning information found for device: ${deviceId}`);
+    }
+  } catch (err) {
+    console.error("Error fetching tuning information:", err);
+    res.status(500).send("Error fetching tuning information");
+  }
+});
+
+// Route to update tuning information
+app.put("/api/tuning/updateTuningInformation", async (req, res) => {
+  const { deviceId, autoTuneIdeal, intervalMinutes } = req.body;
+
+  if (
+    !deviceId ||
+    autoTuneIdeal === undefined ||
+    intervalMinutes === undefined
+  ) {
+    return res
+      .status(400)
+      .send("Device ID, AutoTuneIdeal, and IntervalMinutes are required");
+  }
+
+  try {
+    console.log("Updating tuning information for deviceId:", deviceId); // Debugging line
+
+    const updatedTuning = await TuningInformation.findOneAndUpdate(
+      { DeviceID: deviceId },
+      {
+        $set: {
+          AutoTuneIdeal: autoTuneIdeal,
+          "IntervalSchedule.IntervalMinutes": intervalMinutes,
+          LastUpdated: new Date(), // Optionally update the "LastUpdated" field
+        },
+      },
+      { new: true } // This returns the updated document
+    );
+
+    if (updatedTuning) {
+      console.log("Tuning information updated successfully:", updatedTuning); // Debugging line
+      res.json(updatedTuning); // Return the updated data
+    } else {
+      console.log("No tuning information found for device:", deviceId); // Debugging line
+      res
+        .status(404)
+        .send("Tuning information not found for the specified device");
+    }
+  } catch (err) {
+    console.error("Error updating tuning information:", err);
+    res.status(500).send("Error updating tuning information");
+  }
+});
+
 // Route to fetch processed MongoDB data from FastAPI
 app.get("/process-mongodb-data", async (req, res) => {
+  const { deviceId } = req.query; // Retrieve deviceId from query parameters
+  const fastApiUrl = `http://fastapi-app2:8001/process-mongodb-data${
+    deviceId ? `?deviceId=${deviceId}` : ""
+  }`;
   try {
-    const response = await axios.get(
-      "http://fastapi-app2:8001/process-mongodb-data"
-    );
+    const response = await axios.get(fastApiUrl);
     res.json(response.data);
   } catch (err) {
     console.error("Error fetching MongoDB data:", err.message);
@@ -78,7 +159,7 @@ io.on("connection", async (socket) => {
         try {
           // Send data to FastAPI for processing
           const response = await axios.post(
-            "http://localhost:8000/process_and_detect",
+            "http://fastapi-app:8000/process_and_detect",
             {
               IRLED: IRLED,
               RedLED: RedLED,
@@ -170,7 +251,6 @@ io.on("connection", async (socket) => {
 // Endpoint to fetch all distinct device IDs (clientID)
 app.get("/availableDeviceIds", async (req, res) => {
   try {
-    // Fetch all unique client IDs (device IDs) from ProcessedData collection
     const deviceIds = await ProcessedData.distinct("clientID");
     res.json(deviceIds); // Return the list of available device IDs
   } catch (err) {
@@ -179,6 +259,36 @@ app.get("/availableDeviceIds", async (req, res) => {
   }
 });
 
+// Endpoint to fetch all data for a specific device ID from ProcessedData
+app.get("/allProcessedData", async (req, res) => {
+  const { deviceId } = req.query; // Get the deviceId from query params
+  try {
+    if (!deviceId) {
+      return res.status(400).send("Device ID is required");
+    }
+    // Fetch all data entries for the specified clientID (device ID) and select only the desired fields
+    const allData = await ProcessedData.find(
+      { clientID: deviceId },
+      {
+        _id: 1,
+        clientID: 1,
+        DateTime: 1,
+        heart_rate: 1,
+        spo2: 1,
+      }
+    ).sort({ DateTime: 1 });
+    if (allData.length > 0) {
+      res.json(allData); // Send the filtered data as a response
+    } else {
+      res.status(404).send(`No data found for device: ${deviceId}`);
+    }
+  } catch (err) {
+    console.error("Error fetching all processed data:", err);
+    res.status(500).send("Error fetching data");
+  }
+});
+
+// Route to fetch the latest processed data from MongoDB
 app.get("/latestProcessedData", async (req, res) => {
   const { deviceId } = req.query; // Get the deviceId from query params
 

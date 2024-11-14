@@ -7,7 +7,12 @@ import joblib
 from fastapi import FastAPI, HTTPException
 from sklearn.metrics import mean_squared_error
 import math
+import logging
+from datetime import datetime
+from fastapi import Query
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 app = FastAPI()
 
 # MongoDB connection
@@ -129,16 +134,23 @@ def get_single_hr_value(hr_values):
         return np.mean(hr_values)  # You can change this to np.median(hr_values) if needed
     return None
 
-# Main route to process MongoDB data, calculate IBI values, and make predictions using both LSTM and Random Forest
 @app.get("/process-mongodb-data")
-def process_mongodb_data():
+def process_mongodb_data(deviceId: str = Query(None)):
     try:
-        # Retrieve data from MongoDB
-        data_cursor = collection.find({})
+        # Log the deviceId to confirm it's received correctly
+        logging.info(f"Filtering data for device ID: {deviceId}")
+
+        # Prepare MongoDB query
+        query = {}
+        if deviceId:
+            query = {"DeviceID": deviceId}
+
+        # Retrieve data from MongoDB using the query filter
+        data_cursor = collection.find(query)
         data_list = list(data_cursor)
 
         if not data_list:
-            raise HTTPException(status_code=404, detail="No data found in MongoDB")
+            raise HTTPException(status_code=404, detail="No data found for the specified device ID")
 
         # Convert MongoDB data to pandas DataFrame
         df = pd.DataFrame(data_list)
@@ -160,6 +172,13 @@ def process_mongodb_data():
         df['Actual_HR'] = df['Actual_HR_List'].apply(get_single_hr_value)
         df['Predicted_HR_LSTM'] = df['Predicted_HR_List_LSTM'].apply(get_single_hr_value)
         df['Predicted_HR_RF'] = df['Predicted_HR_List_RF'].apply(get_single_hr_value)
+
+        # Filter rows with NaN values in Predicted_HR columns and log skipped rows
+        initial_count = len(df)
+        df = df.dropna(subset=['Predicted_HR_LSTM', 'Predicted_HR_RF'])
+        skipped_count = initial_count - len(df)
+        if skipped_count > 0:
+            logging.info(f"Skipped {skipped_count} rows with NaN values in Predicted HR columns.")
 
         # Filter out records with valid HR values for RMSE calculation
         valid_records = df.dropna(subset=['Actual_HR', 'Predicted_HR_LSTM', 'Predicted_HR_RF'])
@@ -186,4 +205,5 @@ def process_mongodb_data():
         }
 
     except Exception as e:
+        logging.error(f"Error during processing: {e}")
         raise HTTPException(status_code=500, detail=f"Error processing data: {str(e)}")
