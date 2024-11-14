@@ -34,7 +34,7 @@ app.get("/health-data", async (req, res) => {
     res.status(500).send("Error fetching data");
   }
 });
-
+/*
 // Route to fetch processed MongoDB data from FastAPI
 app.get("/process-mongodb-data", async (req, res) => {
   try {
@@ -47,6 +47,22 @@ app.get("/process-mongodb-data", async (req, res) => {
     res.status(500).send("Error fetching MongoDB data");
   }
 });
+*/ 
+
+// Route to fetch processed MongoDB data from FastAPI
+app.get("/process-mongodb-data", async (req, res) => {
+  const { deviceId } = req.query; // Retrieve deviceId from query parameters
+  const fastApiUrl = `http://fastapi-app2:8001/process-mongodb-data${deviceId ? `?deviceId=${deviceId}` : ""}`;
+
+  try {
+    const response = await axios.get(fastApiUrl);
+    res.json(response.data);
+  } catch (err) {
+    console.error("Error fetching MongoDB data:", err.message);
+    res.status(500).send("Error fetching MongoDB data");
+  }
+});
+
 
 io.on("connection", async (socket) => {
   console.log("New client connected");
@@ -201,6 +217,36 @@ app.get("/latestProcessedData", async (req, res) => {
     res.status(500).send("Error fetching data");
   }
 });
+
+// Endpoint to fetch all data for a specific device ID from ProcessedData
+app.get("/allProcessedData", async (req, res) => {
+  const { deviceId } = req.query; // Get the deviceId from query params
+
+  try {
+    if (!deviceId) {
+      return res.status(400).send("Device ID is required");
+    }
+
+    // Fetch all data entries for the specified clientID (device ID) and select only the desired fields
+    const allData = await ProcessedData.find({ clientID: deviceId }, {
+      _id: 1,
+      clientID: 1,
+      DateTime: 1,
+      heart_rate: 1,
+      spo2: 1
+    }).sort({ DateTime: 1 });
+
+    if (allData.length > 0) {
+      res.json(allData); // Send the filtered data as a response
+    } else {
+      res.status(404).send(`No data found for device: ${deviceId}`);
+    }
+  } catch (err) {
+    console.error("Error fetching all processed data:", err);
+    res.status(500).send("Error fetching data");
+  }
+});
+
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {

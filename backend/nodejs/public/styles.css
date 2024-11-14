@@ -74,14 +74,14 @@ header {
     text-align: center;
 }
 
-/* Prediction Results Styling */
-.predictions-grid {
+/* Prediction and Graph Card Styles */
+.predictions-grid, .graphs-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 20px;
 }
 
-.prediction-card {
+.prediction-card, .graph-card {
     background-color: #fff;
     border-radius: 10px;
     padding: 20px;
@@ -90,23 +90,211 @@ header {
     text-align: center;
 }
 
-.prediction-card:hover {
+.prediction-card:hover, .graph-card:hover {
     transform: scale(1.05);
 }
 
-.prediction-card h3 {
+.prediction-card h3, .graph-card h3 {
     font-size: 20px;
     color: #0275d8;
 }
 
-.prediction-card p {
+.prediction-card p, .graph-card p {
     font-size: 24px;
     color: #333;
 }
 
-.prediction-card small {
+.prediction-card small, .graph-card small {
     display: block;
     margin-top: 10px;
     font-size: 14px;
     color: #666;
+}
+
+/* Table styles */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 12px;
+    text-align: center;
+}
+
+th {
+    background-color: #025f99;
+    color: white;
+}
+
+tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+tr:hover {
+    background-color: #e9f5ff;
+}
+
+td {
+    font-size: 14px;
+}
+
+/* Styling for large cell data */
+td.large-cell {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px;
+    cursor: pointer;
+}
+
+/* CSS for expanded row */
+tr.expanded td.large-cell {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+}
+
+/* Device Select Styling */
+#deviceSelect, #device-select {
+    font-size: 1rem;
+    padding: 8px;
+    margin-right: 10px;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+    transition: border-color 0.3s ease;
+}
+
+#deviceSelect:focus, #device-select:focus {
+    border-color: #025f99;
+    outline: none;
+}
+
+#fetchDataButton {
+    font-size: 1rem;
+    padding: 10px 20px;
+    background-color: #025f99;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+#fetchDataButton:hover {
+    background-color: #023e66;
+}
+
+/* Device Select Section */
+#device-select-section {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    font-size: 1rem;
+    color: #333;
+}
+
+#device-select-section label {
+    margin-right: 10px;
+    font-weight: bold;
+}
+
+/* Header and Chart Titles */
+h1, h2 {
+    color: #025f99;
+    text-align: center;
+    font-weight: bold;
+}
+
+/* Graph Container Styles as Cards */
+.graph-card {
+    width: 100%;
+    height: 500px;
+    padding: 20px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+
+/* Unified device select container styling */
+.device-select-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    font-size: 1rem;
+    color: #333;
+}
+
+.device-select-container label {
+    margin-right: 10px;
+    font-weight: bold;
+}
+
+.device-select {
+    font-size: 1rem;
+    padding: 8px;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+    margin-right: 10px;
+    transition: border-color 0.3s ease;
+}
+
+.device-select:focus {
+    border-color: #025f99;
+    outline: none;
+}
+
+#fetchDataButton {
+    font-size: 1rem;
+    padding: 10px 20px;
+    background-color: #025f99;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+#fetchDataButton:hover {
+    background-color: #023e66;
+}
+
+
+    /* RMSE Section */
+    #rmse-section {
+        background-color: #e9f5ff;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-top: 20px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+  
+      #rmse-section h2 {
+        color: #025f99;
+        margin: 0;
+      }
+  
+      #rmse-section p {
+        font-size: 1.1rem;
+        margin: 0.5rem 0;
+      }
+  
+      /* Chart Containers */
+   /* Chart Container Styles */
+.chart-container {
+    margin: 2rem 0;
+    padding: 1rem;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 1000px; /* Optional: limits the width for larger screens */
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
 }
