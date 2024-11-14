@@ -117,7 +117,7 @@ app.put("/api/tuning/updateTuningInformation", async (req, res) => {
 // Route to fetch processed MongoDB data from FastAPI
 app.get("/process-mongodb-data", async (req, res) => {
   const { deviceId } = req.query; // Retrieve deviceId from query parameters
-  const fastApiUrl = `http://fastapi-app2:8001/process-mongodb-data${
+  const fastApiUrl = `http://fastapi-app2:8001/api2/process-mongodb-data${
     deviceId ? `?deviceId=${deviceId}` : ""
   }`;
   try {
@@ -159,7 +159,7 @@ io.on("connection", async (socket) => {
         try {
           // Send data to FastAPI for processing
           const response = await axios.post(
-            "http://fastapi-app:8000/process_and_detect",
+            "http://fastapi-app:8000/api/process_and_detect",
             {
               IRLED: IRLED,
               RedLED: RedLED,
