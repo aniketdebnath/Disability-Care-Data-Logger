@@ -1,56 +1,108 @@
 const socket = io();
 
-socket.on('connect', () => {
-    console.log('Connected to server');
+// Connect event: Fired when the client connects to the server
+socket.on("connect", () => {
+  console.log("Connected to server");
 });
 
-socket.on('healthDataUpdate', function(data) {
-    console.log('Data received:', data);
-    if (data.HealthData) {
-        updateData('heart-rate', data.HealthData.HeartRate, 'Heart Rate');
-        updateData('oxygen-saturation', data.HealthData.OxygenLevel, 'Oxygen Saturation');
-        updateAccelerometerData(data.HealthData.AccelerometerData);
-    }
+// Fetch available device IDs (clientIDs) to populate the dropdown
+fetchAvailableDeviceIds();
+
+// Function to fetch available device IDs from the backend
+function fetchAvailableDeviceIds() {
+  fetch("/availableDeviceIds")
+    .then((response) => response.json())
+    .then((deviceIds) => {
+      console.log("Available Device IDs:", deviceIds);
+
+      // Populate the device select dropdown
+      const deviceSelect = document.getElementById("device-select");
+      deviceSelect.innerHTML = ""; // Clear existing options
+
+      // Add a default "Please select a device" option
+      const defaultOption = document.createElement("option");
+      defaultOption.value = "";
+      defaultOption.textContent = "Please select a device";
+      deviceSelect.appendChild(defaultOption);
+
+      // Add each device ID as an option
+      deviceIds.forEach((deviceId) => {
+        const option = document.createElement("option");
+        option.value = deviceId;
+        option.textContent = deviceId;
+        deviceSelect.appendChild(option);
+      });
+    })
+    .catch((error) => {
+      console.error("Error fetching device IDs:", error);
+    });
+}
+
+// Listen for the latest processed data updates from the server
+socket.on("latestDataUpdate", (data) => {
+  console.log("Latest data received:", data);
+
+  // Update heart rate and oxygen saturation (SpO₂) on the page
+  updateData("heart-rate-value", data.heart_rate, "Heart Rate");
+  updateData("spo2-value", data.spo2, "Oxygen Saturation (SpO₂)");
+
+  // Update accelerometer data (MPU)
+  if (data.mpuData) {
+    updateAccelerometerData(data.mpuData);
+  }
 });
 
-// Listen for prediction results and update the prediction section
-socket.on('predictionResult', function(data) {
-    console.log('Prediction result received:', data);
-
-    // Update SVM Prediction
-    document.getElementById('svm-prediction').textContent = data.predictions.svm_prediction;
-    document.getElementById('svm-confidence').textContent = `Confidence: ${data.predictions.svm_confidence.toFixed(2)}`;
-
-    // Update Random Forest Prediction
-    document.getElementById('rf-prediction').textContent = data.predictions.rf_prediction;
-    document.getElementById('rf-confidence').textContent = `Confidence: ${data.predictions.rf_confidence.toFixed(2)}`;
-
-    // Update KNN Prediction
-    document.getElementById('knn-prediction').textContent = data.predictions.knn_prediction;
-    document.getElementById('knn-confidence').textContent = `Confidence: ${data.predictions.knn_confidence.toFixed(2)}`;
-});
-
+// General function to update health data sections
 function updateData(elementId, value, label) {
-    const element = document.getElementById(elementId);
-    const content = `<h2>${label}</h2><p>Value: ${value}</p>`;
-    element.innerHTML = content;
+  const element = document.getElementById(elementId);
+  element.textContent = `${label}: ${value || "N/A"}`;
 }
 
+// Function to update accelerometer data display
 function updateAccelerometerData(accelData) {
-    if (accelData) {
-        document.getElementById('ax').textContent = accelData.Ax.toFixed(3);
-        document.getElementById('ay').textContent = accelData.Ay.toFixed(3);
-        document.getElementById('az').textContent = accelData.Az.toFixed(3);
-    }
+  document.getElementById("ax").textContent = accelData.Ax
+    ? accelData.Ax.toFixed(3)
+    : "N/A";
+  document.getElementById("ay").textContent = accelData.Ay
+    ? accelData.Ay.toFixed(3)
+    : "N/A";
+  document.getElementById("az").textContent = accelData.Az
+    ? accelData.Az.toFixed(3)
+    : "N/A";
 }
 
-socket.on('disconnect', () => {
-    console.log('Disconnected from server');
-});
+// Function to fetch the latest data for the selected device
+function fetchLatestData() {
+  const deviceId = document.getElementById("device-select").value;
 
-document.getElementById('detail-link').addEventListener('click', () => {
-    const latestData = localStorage.getItem('latestHealthData');
-    if (latestData) {
-        localStorage.setItem('detailHealthData', latestData);
-    }
-});
+  // Check if deviceId is selected
+  if (!deviceId) {
+    alert("Please select a device");
+    return;
+  }
+
+  // Fetch the latest data for the selected device
+  fetch(`/latestProcessedData?deviceId=${deviceId}`)
+    .then((response) => response.json())
+    .then((data) => {
+      // Update the dashboard with the fetched data
+      updateData("heart-rate-value", data.heart_rate, "Heart Rate");
+      updateData("spo2-value", data.spo2, "Oxygen Saturation (SpO₂)");
+
+      // Update accelerometer data (MPU)
+      if (data.mpuData) {
+        updateAccelerometerData(data.mpuData);
+      }
+    })
+    .catch((error) => {
+      console.error("Error fetching latest data:", error);
+    });
+}
+
+// Event listener for device select dropdown change
+document
+  .getElementById("device-select")
+  .addEventListener("change", fetchLatestData);
+
+// Initial fetch for available device IDs when the page loads
+fetchAvailableDeviceIds();

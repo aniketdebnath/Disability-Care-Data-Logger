@@ -1,81 +1,93 @@
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_score
 from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
-import joblib  # For saving/loading model
+import joblib
+import os
 
-# Load your processed ECG data
-data_path = r'A:\AnomalyDetection\mit-bih-project\data\processed\combined_beat_data.csv'
+# Set the directory to save models and scalers
+model_dir = r'A:\AnomalyDetection\mit-bih-project2\models'
+os.makedirs(model_dir, exist_ok=True)
+
+# Load your processed data
+data_path = r'A:\AnomalyDetection\mit-bih-project2\data\processed\new_combined_beat_data.csv'
 df = pd.read_csv(data_path)
 
-# Optional: Drop any rows with missing values (NaN)
+# Drop rows with missing values (NaN)
 df.dropna(inplace=True)
 
 # Define features (X) and labels (y)
-X = df[['RR_Interval', 'HeartRate', 'QRS_Duration', 'P_Wave_Duration', 'QT_Interval']]
+features = ['RR_Interval', 'HeartRate', 'SDNN', 'SDSD']
+X = df[features].copy()
 y = df['Label']  # 1 for abnormal, 0 for normal
 
-# Split the dataset into training and testing sets
+# Split dataset into training and testing sets
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# Feature Scaling: Normalize the features for better performance
+# Feature scaling
 scaler = StandardScaler()
 X_train = scaler.fit_transform(X_train)
 X_test = scaler.transform(X_test)
 
-# Train a KNN classifier with a default number of neighbors
-knn_model = KNeighborsClassifier(n_neighbors=11, weights='distance', metric='manhattan')  # Initial configuration
-knn_model.fit(X_train, y_train)
+# Save the scaler
+scaler_path = os.path.join(model_dir, 'knn_scaler.pkl')
+joblib.dump(scaler, scaler_path)
+print(f"Scaler saved to {scaler_path}")
 
-joblib.dump(scaler, 'knn_scaler.pkl')  # Save the scaler
+# Define parameter grid for hyperparameter tuning
+param_grid = {
+    'n_neighbors': [3, 5, 7, 9, 11],
+    'weights': ['uniform', 'distance'],
+    'metric': ['euclidean', 'manhattan']
+}
 
-# Save the trained model using joblib
-joblib.dump(knn_model, 'knn_model_joblib.pkl')
-print("Model saved to knn_model_joblib.pkl")
+# Initialize GridSearchCV with KNN classifier
+grid_search = GridSearchCV(KNeighborsClassifier(), param_grid, cv=5, verbose=2)
+grid_search.fit(X_train, y_train)
 
-# Load the saved model
-loaded_knn_model = joblib.load('knn_model_joblib.pkl')
-print("Model loaded from knn_model_joblib.pkl")
+# Save the best KNN model
+best_knn_model = grid_search.best_estimator_
+model_path = os.path.join(model_dir, 'knn_model_joblib.pkl')
+joblib.dump(best_knn_model, model_path)
+print(f"Best KNN model saved to {model_path}")
 
-# Predict on the test set
-y_pred = loaded_knn_model.predict(X_test)
+# Display the best parameters
+print("Best parameters found by GridSearchCV:", grid_search.best_params_)
 
-# Evaluate the model
-print("Confusion Matrix:")
+# Cross-validation with the best model
+cv_scores = cross_val_score(best_knn_model, X_train, y_train, cv=5)
+print(f"Cross-validation scores: {cv_scores}")
+print(f"Mean cross-validation score: {np.mean(cv_scores)}")
+
+# Evaluate the model on the test set
+y_pred = best_knn_model.predict(X_test)
+print("\nConfusion Matrix:")
 print(confusion_matrix(y_test, y_pred))
-
 print("\nClassification Report:")
 print(classification_report(y_test, y_pred))
-
 print("\nAccuracy:", accuracy_score(y_test, y_pred))
 
-# # Step 2: Hyperparameter Tuning
-# # Define parameter grid for GridSearchCV
-# param_grid = {
-#     'n_neighbors': [1, 3, 5, 7, 9, 11],  # Testing odd numbers for k to avoid ties
-#     'weights': ['uniform', 'distance'],  # Uniform weights or distance-based weights
-#     'metric': ['euclidean', 'manhattan']  # Distance metrics
-# }
+# --- Trial Prediction Section ---
+# Load the scaler and best model for prediction testing
+loaded_scaler = joblib.load(scaler_path)
+loaded_model = joblib.load(model_path)
 
-# # Initialize GridSearchCV with KNeighborsClassifier
-# grid = GridSearchCV(KNeighborsClassifier(), param_grid, cv=5, verbose=2)
+# Define a sample data point for prediction
+sample_data = {
+    'RR_Interval': 1,     # Example RR interval
+    'HeartRate': 130,       # Example Heart rate
+    'SDNN': 0.05,
+    'SDSD': 0.03
+}
 
-# # Fit GridSearchCV
-# grid.fit(X_train, y_train)
+# Scale the sample data for prediction
+sample_features = np.array([sample_data[feature] for feature in features]).reshape(1, -1)
+sample_scaled = loaded_scaler.transform(sample_features)
 
-# # Get the best parameters
-# print("Best parameters found by GridSearchCV:", grid.best_params_)
+# Make the prediction
+sample_prediction = loaded_model.predict(sample_scaled)
+sample_prediction_label = 'Abnormal' if sample_prediction[0] == 1 else 'Normal'
 
-# # Predict with the best estimator
-# y_pred_grid = grid.best_estimator_.predict(X_test)
-
-# # Evaluate the tuned model
-# print("\nConfusion Matrix (GridSearchCV Model):")
-# print(confusion_matrix(y_test, y_pred_grid))
-
-# print("\nClassification Report (GridSearchCV Model):")
-# print(classification_report(y_test, y_pred_grid))
-
-# print("\nAccuracy (GridSearchCV Model):", accuracy_score(y_test, y_pred_grid))
+print(f"\nPrediction for sample data: {sample_prediction_label}")

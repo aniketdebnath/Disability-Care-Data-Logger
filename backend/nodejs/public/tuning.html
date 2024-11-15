@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0" />
+    <title>Tuning Information</title>
+    <link
+      rel="stylesheet"
+      href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <nav class="navbar">
+        <div class="logo">Health Tracker</div>
+        <ul class="nav-links">
+          <li><a href="/">Health Dashboard</a></li>
+          <li><a href="/detailhealth.html">Health Overview</a></li>
+          <li><a href="/anomalyDetection.html">Anomaly Detection</a></li>
+          <li><a href="/irled.html">Predictive Analysis</a></li>
+          <li><a href="/tuning.html">Tuning Information</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <main class="container">
+      <h1>Tuning Information</h1>
+
+      <label for="device-select">Select Device ID:</label>
+      <select id="device-select">
+        <!-- Device options will be populated here -->
+      </select>
+
+      <section id="tuning-info">
+        <!-- Tuning information will be displayed here -->
+      </section>
+
+      <h3>Update Tuning Information</h3>
+      <label for="autoTuneIdeal">Auto Tune Ideal:</label>
+      <input
+        type="checkbox"
+        id="autoTuneIdeal" />
+
+      <label for="intervalMinutes">Interval Minutes:</label>
+      <input
+        type="number"
+        id="intervalMinutes" />
+
+      <button id="update-tuning-btn">Update Tuning</button>
+    </main>
+
+    <script src="tuning.js"></script>
+    <!-- External JS file -->
+  </body>
+</html>

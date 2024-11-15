@@ -4,6 +4,7 @@ pydantic
 joblib
 pandas
 numpy
-heartpy
 scipy
 scikit-learn==1.3.2
+tensorflow==2.12.0
+xgboost

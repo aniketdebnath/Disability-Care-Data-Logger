@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0" />
+    <title>Anomaly Detection</title>
+    <link
+      rel="stylesheet"
+      href="styles.css" />
+    <script src="/socket.io/socket.io.js"></script>
+  </head>
+  <body>
+    <header>
+      <nav class="navbar">
+        <div class="logo">Health Tracker</div>
+        <ul class="nav-links">
+          <li><a href="/">Health Dashboard</a></li>
+          <li><a href="/detailhealth.html">Health Overview</a></li>
+          <li><a href="/anomalyDetection.html">Anomaly Detection</a></li>
+          <li><a href="/irled.html">Predictive Analysis</a></li>
+          <li><a href="/tuning.html">Tuning Information</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <main class="container">
+      <h1>Anomaly Detection Summary</h1>
+
+      <!-- Device Selection -->
+      <section>
+        <label for="device-select">Select a Device:</label>
+        <select id="device-select">
+          <option value="">Loading devices...</option>
+        </select>
+      </section>
+
+      <section class="data-block">
+        <h2>Combined Prediction</h2>
+        <p
+          class="highlight"
+          id="combined-prediction">
+          Normal
+        </p>
+        <p
+          class="description"
+          id="explanation">
+          This prediction indicates the overall status of the detected signals.
+        </p>
+        <div class="reliability">
+          <strong>Reliability Score:</strong>
+          <span id="reliability-score">-</span>
+        </div>
+      </section>
+
+      <section
+        class="predictions-grid"
+        style="display: flex; justify-content: space-between">
+        <!-- SVM Prediction Card -->
+        <div
+          class="prediction-card"
+          style="
+            width: 23%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+          ">
+          <h3>SVM Model</h3>
+          <p>Prediction: <span id="svm-prediction">Normal</span></p>
+          <p>Confidence: <span id="svm-confidence">-</span></p>
+        </div>
+
+        <!-- Random Forest Prediction Card -->
+        <div
+          class="prediction-card"
+          style="
+            width: 23%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+          ">
+          <h3>Random Forest Model</h3>
+          <p>Prediction: <span id="rf-prediction">Normal</span></p>
+          <p>Confidence: <span id="rf-confidence">-</span></p>
+        </div>
+
+        <!-- XGBoost Prediction Card -->
+        <div
+          class="prediction-card"
+          style="
+            width: 23%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+          ">
+          <h3>XGBoost Model</h3>
+          <p>Prediction: <span id="xgb-prediction">Normal</span></p>
+          <p>Confidence: <span id="xgb-confidence">-</span></p>
+        </div>
+
+        <!-- KNN Prediction Card -->
+        <div
+          class="prediction-card"
+          style="
+            width: 23%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+          ">
+          <h3>KNN Model</h3>
+          <p>Prediction: <span id="knn-prediction">Normal</span></p>
+          <p>Confidence: <span id="knn-confidence">-</span></p>
+        </div>
+      </section>
+
+      <!-- Stress Detection section for LSTM -->
+      <section
+        class="data-block"
+        style="margin-top: 30px">
+        <h2>Stress Detection</h2>
+        <div
+          class="prediction-card"
+          style="padding: 10px; border: 1px solid #ddd; border-radius: 8px">
+          <h3>LSTM Model</h3>
+          <p>Prediction: <span id="lstm-prediction">Normal</span></p>
+          <p>Confidence: <span id="lstm-confidence">-</span></p>
+        </div>
+      </section>
+    </main>
+
+    <script src="anomalyDetection.js"></script>
+  </body>
+</html>
