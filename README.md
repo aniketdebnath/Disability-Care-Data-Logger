@@ -1,11 +1,11 @@
 # Disability Care Datalogger
 
+## 🚀 Project Overview
+The **Disability Care Datalogger** is a real-time health monitoring system that integrates machine learning with hardware-based signal processing. It is designed to analyze **Photoplethysmography (PPG) signals** for heart rate variability and stress detection using a range of ML models. The system processes data from an **ESP32-C6 microcontroller** and transmits it to a backend hosted on **AWS EC2** using **FastAPI** and **Node.js**, ensuring low-latency, real-time insights.
+
 ![Disability Care Datalogger](https://l7ewz3hqkc.ufs.sh/f/LFPunsIWlVM1gQ8IkYojsKw7v2ZFE4ekIofizhSymNHAJ3CR)
 ![Disability Care Datalogger](https://l7ewz3hqkc.ufs.sh/f/LFPunsIWlVM1xQBhnfKOFR20S6pdEeX1fn7JsaKVPTQuMC94)
 ![Disability Care Datalogger](https://l7ewz3hqkc.ufs.sh/f/LFPunsIWlVM14BJwpSgfeZQwYCLzMKq5dnuTHy0bhXlBcF7V)
-
-## 🚀 Project Overview
-The **Disability Care Datalogger** is a real-time health monitoring system that integrates machine learning with hardware-based signal processing. It is designed to analyze **Photoplethysmography (PPG) signals** for heart rate variability and stress detection using a range of ML models. The system processes data from an **ESP32-C6 microcontroller** and transmits it to a backend hosted on **AWS EC2** using **FastAPI** and **Node.js**, ensuring low-latency, real-time insights.
 
 ---
 
